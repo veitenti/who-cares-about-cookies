@@ -1,16 +1,53 @@
-var keywords = ['cookie', 'tracking', 'cc-window', 'as-oil', 'gdpr', 'consent'];
+var keywords = ['cookie', 'tracking', 'gdpr', 'consent'];
 
-function removeSingleCookieBanner(banner) {
-  if (banner && getComputedStyle(banner).position == 'fixed') {
-    banner.remove();
-    console.info('removed cookie consent banner with id: ' + banner.id);
-  }
+function findTopLevelCookieBanners() {
+  let found = [];
+  Array.from(document.body.children).forEach(function(candidate) {
+    if (getComputedStyle(candidate).position === 'fixed') {
+      for (let i = 0; i < keywords.length; i++) {
+        let keyword = keywords[i];
+        if (candidate.textContent.includes(keyword)) {
+          // match -> remove
+          found.push(candidate);
+        }
+      }
+    }
+  });
+  return found;
+}
+
+function findCookieBannersById() {
+  let found = [];
+  keywords.forEach(function(id) {
+    document.querySelectorAll('div[id*="' + id + '"]').forEach(function(candidate) {
+      if (getComputedStyle(candidate).position == 'fixed') {
+        found.push(candidate);
+      }
+    });
+  });
+  return found;
+}
+
+function findCookieBannersByClass() {
+  let found = [];
+  keywords.forEach(function(clazz) {
+    document.querySelectorAll('div[class*="' + clazz + '"]').forEach(function(candidate) {
+      if (getComputedStyle(candidate).position == 'fixed') {
+        found.push(candidate);
+      }
+    });
+  });
+  return found;
 }
 
 function removeCookieBanners() {
-  keywords.forEach(function(id) {
-    document.querySelectorAll('div[id*="' + id + '"]').forEach(removeSingleCookieBanner);
-    document.querySelectorAll('div[class*="' + id + '"]').forEach(removeSingleCookieBanner);
+  let banners = [];
+  banners.push(...findTopLevelCookieBanners());
+  banners.push(...findCookieBannersById());
+  banners.push(...findCookieBannersByClass());
+  banners.forEach(function(banner) {
+    banner.remove();
+    console.info('removed cookie consent banner with id: ' + banner.id);
   });
 }
 
