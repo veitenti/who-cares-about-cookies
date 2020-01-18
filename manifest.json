@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Who cares about cookies",
-  "version": "1.0",
+  "version": "0.5",
 
   "description": "Automatically detects cookie consent banners on websites and removes them",
 
