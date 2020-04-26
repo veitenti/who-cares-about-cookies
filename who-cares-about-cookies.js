@@ -1,53 +1,56 @@
 var keywords = ['cookie', 'tracking', 'gdpr', 'consent'];
 
-function findTopLevelCookieBanners() {
-  let found = [];
-  Array.from(document.body.children).forEach(function(candidate) {
-    if (getComputedStyle(candidate).position === 'fixed') {
-      for (let i = 0; i < keywords.length; i++) {
-        let keyword = keywords[i];
-        if (candidate.textContent.includes(keyword)) {
-          // match -> remove
-          found.push(candidate);
-        }
-      }
-    }
+function findCookieBanners() {
+  let banners = [];
+  keywords.forEach(keyword => {
+    banners.push(...findCookieBannersByKeyword(keyword));
   });
-  return found;
+  return banners.filter(b => b);
+}
+function findCookieBannersByKeyword(keyword) {
+  return [...document.getElementsByTagName('*')]
+    .filter(candidate => matchesKeyword(candidate, keyword))
+    .map(match => findCookieBannerContainer(match))
+    .filter(container => container);
+}
+function findCookieBannerContainer(candidate) {
+  if (candidate) {
+    return isBannerContainer(candidate)
+      ? candidate
+      : findCookieBannerContainer(candidate.parentElement);
+  }
 }
 
-function findCookieBannersById() {
-  let found = [];
-  keywords.forEach(function(id) {
-    document.querySelectorAll('div[id*="' + id + '"]').forEach(function(candidate) {
-      if (getComputedStyle(candidate).position == 'fixed') {
-        found.push(candidate);
-      }
-    });
-  });
-  return found;
+function matchesKeyword(candidate, keyword) {
+  return classMatchesKeyword(candidate, keyword) || idMatchesKeyword(candidate, keyword) || textContentMatchesKeyword(candidate, keyword);
 }
-
-function findCookieBannersByClass() {
-  let found = [];
-  keywords.forEach(function(clazz) {
-    document.querySelectorAll('div[class*="' + clazz + '"]').forEach(function(candidate) {
-      if (getComputedStyle(candidate).position == 'fixed') {
-        found.push(candidate);
-      }
-    });
-  });
-  return found;
+function classMatchesKeyword(candidate, keyword) {
+  return candidate.className && candidate.className.toLowerCase && candidate.className.toLowerCase().includes(keyword);
+}
+function idMatchesKeyword(candidate, keyword) {
+  return candidate.id && candidate.id.toLowerCase && candidate.id.toLowerCase().includes(keyword);
+}
+function textContentMatchesKeyword(candidate, keyword) {
+  return candidate.innerText && candidate.innerText.toLowerCase().includes(keyword) && isKeywordLeaf(candidate, keyword);
+}
+function isKeywordLeaf(candidate, keyword) {
+  return [...candidate.children].filter(child => child.innerText && child.innerText.includes(keyword)).length == 0;
+}
+function isBannerContainer(candidate) {
+  return candidate
+    && parseInt(getComputedStyle(candidate)['z-index'])
+    && (
+      getComputedStyle(candidate).position == 'fixed'
+      || getComputedStyle(candidate).position == 'relative'
+      || getComputedStyle(candidate).position == 'absolute'
+    );
 }
 
 function removeCookieBanners() {
-  let banners = [];
-  banners.push(...findTopLevelCookieBanners());
-  banners.push(...findCookieBannersById());
-  banners.push(...findCookieBannersByClass());
-  banners.forEach(function(banner) {
+  findCookieBanners().filter(banner => banner).forEach(banner => {
+    console.log("removing cookie banner:");
+    console.log(banner);
     banner.remove();
-    console.info('removed cookie consent banner with id: ' + banner.id);
   });
 }
 
@@ -55,6 +58,9 @@ function removeCookieBanners() {
 removeCookieBanners();
 
 // for lazy loaded cookie consent plugins
-setTimeout(function() {
+setTimeout(function () {
   removeCookieBanners();
 }, 250);
+setTimeout(function () {
+  removeCookieBanners();
+}, 3000);
