@@ -1,18 +1,92 @@
-var keywords = ["cookie", "tracking", "gdpr", "consent"];
+var idMatchers = [
+  "cmpbox",
+  "cookie-note",
+  "cookie-law-info-bar",
+  "cf-root",
+  "cookiefirst-root",
+  "CybotCookiebotDialog",
+  "usercentrics-root",
+  "onetrust-consent-sdk",
+  "onetrust-banner-sdk",
+  "ppms_cm_popup_overlay",
+  "consent_blackbar",
+  "truste-consent-track",
+  "consent-bump",
+  "sp_message_container",
+  "consentBanner",
+  "cookie-banner-root",
+  "tracking",
+  "gdpr",
+  "consent",
+  "gdpr-banner-container",
+];
+var classMatchers = [
+  "cmpbox",
+  "qc-cmp-ui-container",
+  "qc-cmp-showing",
+  "wt-cli-cookie-bar-container",
+  "wt-cli-cookie-bar",
+  "BorlabsCookie",
+  "osano-cm-window",
+  "js-cookie-consent-banner",
+  "ppms_cm_popup_overlay",
+  "hx_cookie-banner",
+  "consent",
+  "tracking",
+  "gdpr",
+  "consent",
+  "js-consent",
+  "message-container", // dangerous!
+];
+var contentMatchers = ["cookie", "tracking", "gdpr", "consent"];
+
+// most cookie consent banenrs are lazy loaded
+[1, 10, 100, 500, 1000, 3000, 5000, 7500, 10000].forEach((timeout) =>
+  setTimeout(() => removeCookieBanners(200), timeout)
+);
+
+function removeCookieBanners(lengthLimit) {
+  findCookieBanners(lengthLimit)
+    .filter((banner) => banner)
+    .forEach((banner) => {
+      console.debug("removing cookie banner:");
+      console.debug(banner);
+      banner.remove();
+    });
+  repairBodyScrollBehaviour();
+}
 
 function findCookieBanners(lengthLimit) {
   let banners = [];
-  keywords.forEach((keyword) => {
-    banners.push(...findCookieBannersByKeyword(keyword, lengthLimit));
+  idMatchers.forEach((keyword) => {
+    banners.push(
+      ...findCookieBannersByKeyword(keyword, idMatchesKeyword, lengthLimit)
+    );
+  });
+  classMatchers.forEach((keyword) => {
+    banners.push(
+      ...findCookieBannersByKeyword(keyword, classMatchesKeyword, lengthLimit)
+    );
+  });
+  contentMatchers.forEach((keyword) => {
+    banners.push(
+      ...findCookieBannersByKeyword(
+        keyword,
+        textContentMatchesKeyword,
+        lengthLimit
+      )
+    );
   });
   return banners.filter((b) => b);
 }
-function findCookieBannersByKeyword(keyword, lengthLimit) {
+
+function findCookieBannersByKeyword(keyword, matcher, lengthLimit) {
   return [...document.getElementsByTagName("*")]
-    .filter((candidate) => matchesKeyword(candidate, keyword))
+    .filter((candidate) => matcher(candidate, keyword))
     .map((match) => findCookieBannerContainer(match, lengthLimit))
     .filter((container) => container);
 }
+
 function findCookieBannerContainer(candidate, lengthLimit) {
   if (candidate) {
     return isBannerContainer(candidate, lengthLimit)
@@ -21,13 +95,6 @@ function findCookieBannerContainer(candidate, lengthLimit) {
   }
 }
 
-function matchesKeyword(candidate, keyword) {
-  return (
-    classMatchesKeyword(candidate, keyword) ||
-    idMatchesKeyword(candidate, keyword) ||
-    textContentMatchesKeyword(candidate, keyword)
-  );
-}
 function classMatchesKeyword(candidate, keyword) {
   return (
     candidate.className &&
@@ -35,6 +102,7 @@ function classMatchesKeyword(candidate, keyword) {
     candidate.className.toLowerCase().includes(keyword)
   );
 }
+
 function idMatchesKeyword(candidate, keyword) {
   return (
     candidate.id &&
@@ -42,6 +110,7 @@ function idMatchesKeyword(candidate, keyword) {
     candidate.id.toLowerCase().includes(keyword)
   );
 }
+
 function textContentMatchesKeyword(candidate, keyword) {
   return (
     candidate.innerText &&
@@ -49,6 +118,7 @@ function textContentMatchesKeyword(candidate, keyword) {
     isKeywordLeaf(candidate, keyword)
   );
 }
+
 function isKeywordLeaf(candidate, keyword) {
   return (
     [...candidate.children].filter(
@@ -56,6 +126,7 @@ function isKeywordLeaf(candidate, keyword) {
     ).length == 0
   );
 }
+
 function isBannerContainer(candidate, lengthLimit) {
   return (
     candidate &&
@@ -72,27 +143,11 @@ function hasPositionStyleUsedForBanners(candidate) {
   );
 }
 
-function removeCookieBanners(lengthLimit) {
-  findCookieBanners(lengthLimit)
-    .filter((banner) => banner)
-    .forEach((banner) => {
-      console.log(
-        "removing cookie banner with length " +
-          banner.innerText.length +
-          " and element:"
-      );
-      console.log(banner);
-      banner.remove();
-    });
+function repairBodyScrollBehaviour() {
+  const body = document.querySelector("body");
+  body.style.overflow = "auto !important";
+  body.style.position = "inherit !important";
+  const html = document.querySelector("html");
+  html.style.overflow = "auto !important";
+  html.style.position = "inherit !important";
 }
-
-// immediate execution
-removeCookieBanners(200);
-
-// for lazy loaded cookie consent plugins
-setTimeout(function () {
-  removeCookieBanners(200);
-}, 250);
-setTimeout(function () {
-  removeCookieBanners(1000);
-}, 3000);
